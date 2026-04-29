@@ -4,7 +4,13 @@ export type DealStatus = 'pending' | 'active' | 'closed' | 'cancelled'
 
 export interface Deal {
   id: number
-  agent: { id: string; first_name: string; last_name: string }
+  agent: {
+    id: number
+    email: string
+    full_name: string
+    department: string
+    team: string
+  } | null
   lead?: number | null
   status: DealStatus
   price?: string

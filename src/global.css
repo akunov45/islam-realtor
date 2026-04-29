@@ -1533,3 +1533,23 @@ body {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
 }
+
+.kanban {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    overflow-x: unset;
+    padding-bottom: 0;
+}
+
+.kanban-col {
+    min-width: unset;
+    max-width: unset;
+}
+
+.g-card,
+.stat-card,
+.kanban-card,
+.kanban-col {
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
