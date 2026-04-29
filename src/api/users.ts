@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { User, CreateStaffRequest } from '../types/api'
+import type { User } from '../types/api'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function unwrap<T>(data: any): T {
@@ -17,16 +17,17 @@ export const usersApi = {
     return unwrap<User>(data)
   },
 
-  async createStaff(payload: CreateStaffRequest): Promise<User> {
-    const { data } = await api.post('/api/users/create-staff/', payload)
+  async list(): Promise<User[]> {
+    const { data } = await api.get('/api/users/')
+    return unwrap<User[]>(data)
+  },
+
+  async createUser(payload: { email: string; role: string; first_name: string; last_name?: string }): Promise<User> {
+    const { data } = await api.post('/api/users/create/', payload)
     return unwrap<User>(data)
   },
 
-  async blockUser(user_id: string): Promise<void> {
-    await api.post('/api/users/block/', { user_id })
-  },
-
-  async unblockUser(user_id: string): Promise<void> {
-    await api.post('/api/users/unblock/', { user_id })
+  async toggleBlock(id: string): Promise<void> {
+    await api.post(`/api/users/${id}/toggle-block/`)
   },
 }

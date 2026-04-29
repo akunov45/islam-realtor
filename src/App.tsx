@@ -1,7 +1,9 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { ThemeProvider } from './store/themeStore'
 import './global.css'
 import './chat-pages.css'
 import './pages/guest/guest.css'
+
 
 import { AuthProvider } from './store/authStore'
 import { RequireAuth, RequireGuest, RequireRole, RequireStaff, RootRedirect } from './components/Guards'
@@ -37,56 +39,58 @@ import GuestChangePassword from './pages/guest/GuestChangePassword'
 
 function App() {
   return (
-    <AuthProvider>
-      <Routes>
-        <Route path="/" element={<RootRedirect />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<RootRedirect />} />
 
-        {/* Публичные */}
-        <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
-        <Route path="/forgot-password" element={<RequireGuest><ForgotPassword /></RequireGuest>} />
+          {/* Публичные */}
+          <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
+          <Route path="/forgot-password" element={<RequireGuest><ForgotPassword /></RequireGuest>} />
 
-        {/* Смена пароля */}
-        <Route path="/change-password" element={<RequireAuth><ChangePassword /></RequireAuth>} />
+          {/* Смена пароля */}
+          <Route path="/change-password" element={<RequireAuth><ChangePassword /></RequireAuth>} />
 
-        {/* Профиль — доступен всем авторизованным */}
-        <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+          {/* Профиль — доступен всем авторизованным */}
+          <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
 
-        {/* Гостевой портал — только buyer/seller */}
-        <Route path="/guest" element={<RequireAuth><RequireStaff guest><GuestHome /></RequireStaff></RequireAuth>} />
-        <Route path="/guest/chat" element={<RequireAuth><RequireStaff guest><GuestChat /></RequireStaff></RequireAuth>} />
-        <Route path="/guest/properties" element={<RequireAuth><RequireStaff guest><GuestProperties /></RequireStaff></RequireAuth>} />
-        <Route path="/guest/news" element={<RequireAuth><RequireStaff guest><GuestNews /></RequireStaff></RequireAuth>} />
-        <Route path="/guest/tips" element={<RequireAuth><RequireStaff guest><GuestTips /></RequireStaff></RequireAuth>} />
-        <Route path="/guest/requests" element={<RequireAuth><RequireStaff guest><GuestRequests /></RequireStaff></RequireAuth>} />
-        <Route path="/guest/profile" element={<RequireAuth><RequireStaff guest><GuestProfile /></RequireStaff></RequireAuth>} />
-        <Route path="/guest/change-password" element={<RequireAuth><RequireStaff guest><GuestChangePassword /></RequireStaff></RequireAuth>} />
+          {/* Гостевой портал — только buyer/seller */}
+          <Route path="/guest" element={<RequireAuth><RequireStaff guest><GuestHome /></RequireStaff></RequireAuth>} />
+          <Route path="/guest/chat" element={<RequireAuth><RequireStaff guest><GuestChat /></RequireStaff></RequireAuth>} />
+          <Route path="/guest/properties" element={<RequireAuth><RequireStaff guest><GuestProperties /></RequireStaff></RequireAuth>} />
+          <Route path="/guest/news" element={<RequireAuth><RequireStaff guest><GuestNews /></RequireStaff></RequireAuth>} />
+          <Route path="/guest/tips" element={<RequireAuth><RequireStaff guest><GuestTips /></RequireStaff></RequireAuth>} />
+          <Route path="/guest/requests" element={<RequireAuth><RequireStaff guest><GuestRequests /></RequireStaff></RequireAuth>} />
+          <Route path="/guest/profile" element={<RequireAuth><RequireStaff guest><GuestProfile /></RequireStaff></RequireAuth>} />
+          <Route path="/guest/change-password" element={<RequireAuth><RequireStaff guest><GuestChangePassword /></RequireStaff></RequireAuth>} />
 
-        {/* Страницы персонала — только staff */}
-        <Route path="/dashboard" element={<RequireAuth><RequireStaff><Dashboard /></RequireStaff></RequireAuth>} />
-        <Route path="/leads" element={<RequireAuth><RequireStaff><Leads /></RequireStaff></RequireAuth>} />
-        <Route path="/leads/:id" element={<RequireAuth><RequireStaff><LeadDetail /></RequireStaff></RequireAuth>} />
-        <Route path="/dialogs" element={<RequireAuth><RequireStaff><Dialogs /></RequireStaff></RequireAuth>} />
-        <Route path="/scoring" element={<RequireAuth><RequireStaff><Scoring /></RequireStaff></RequireAuth>} />
-        <Route path="/messages" element={<RequireAuth><RequireStaff><Messages /></RequireStaff></RequireAuth>} />
-        <Route path="/tags" element={<RequireAuth><RequireStaff><Tags /></RequireStaff></RequireAuth>} />
-        <Route path="/crontab" element={<RequireAuth><RequireStaff><Crontab /></RequireStaff></RequireAuth>} />
-        <Route path="/astronomy" element={<RequireAuth><RequireStaff><Astronomy /></RequireStaff></RequireAuth>} />
-        <Route path="/time" element={<RequireAuth><RequireStaff><Time /></RequireStaff></RequireAuth>} />
-        <Route path="/settings" element={<RequireAuth><RequireStaff><Settings /></RequireStaff></RequireAuth>} />
-        <Route path="/chat" element={<RequireAuth><RequireStaff><RealtorChat /></RequireStaff></RequireAuth>} />
-        <Route path="/realtor-chat" element={<RequireAuth><RequireStaff><RealtorChat /></RequireStaff></RequireAuth>} />
-        <Route path="/admin-chat" element={<RequireAuth><RequireStaff><AdminChat /></RequireStaff></RequireAuth>} />
+          {/* Страницы персонала — только staff */}
+          <Route path="/dashboard" element={<RequireAuth><RequireStaff><Dashboard /></RequireStaff></RequireAuth>} />
+          <Route path="/leads" element={<RequireAuth><RequireStaff><Leads /></RequireStaff></RequireAuth>} />
+          <Route path="/leads/:id" element={<RequireAuth><RequireStaff><LeadDetail /></RequireStaff></RequireAuth>} />
+          <Route path="/dialogs" element={<RequireAuth><RequireStaff><Dialogs /></RequireStaff></RequireAuth>} />
+          <Route path="/scoring" element={<RequireAuth><RequireStaff><Scoring /></RequireStaff></RequireAuth>} />
+          <Route path="/messages" element={<RequireAuth><RequireStaff><Messages /></RequireStaff></RequireAuth>} />
+          <Route path="/tags" element={<RequireAuth><RequireStaff><Tags /></RequireStaff></RequireAuth>} />
+          <Route path="/crontab" element={<RequireAuth><RequireStaff><Crontab /></RequireStaff></RequireAuth>} />
+          <Route path="/astronomy" element={<RequireAuth><RequireStaff><Astronomy /></RequireStaff></RequireAuth>} />
+          <Route path="/time" element={<RequireAuth><RequireStaff><Time /></RequireStaff></RequireAuth>} />
+          <Route path="/settings" element={<RequireAuth><RequireStaff><Settings /></RequireStaff></RequireAuth>} />
+          <Route path="/chat" element={<RequireAuth><RequireStaff><RealtorChat /></RequireStaff></RequireAuth>} />
+          <Route path="/realtor-chat" element={<RequireAuth><RequireStaff><RealtorChat /></RequireStaff></RequireAuth>} />
+          <Route path="/admin-chat" element={<RequireAuth><RequireStaff><AdminChat /></RequireStaff></RequireAuth>} />
 
-        {/* Только директор и суперадмин */}
-        <Route path="/create-staff" element={
-          <RequireAuth>
-            <RequireRole roles={['director', 'superadmin']}>
-              <CreateStaff />
-            </RequireRole>
-          </RequireAuth>
-        } />
-      </Routes>
-    </AuthProvider>
+          {/* Только директор и суперадмин */}
+          <Route path="/create-staff" element={
+            <RequireAuth>
+              <RequireRole roles={['director', 'superadmin']}>
+                <CreateStaff />
+              </RequireRole>
+            </RequireAuth>
+          } />
+        </Routes>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 
