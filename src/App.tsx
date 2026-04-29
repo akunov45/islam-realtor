@@ -21,7 +21,6 @@ import RealtorChat from './pages/RealtorChat'
 import AdminChat from './pages/AdminChat'
 
 import Login from './pages/Login'
-import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
 import ChangePassword from './pages/ChangePassword'
 import Profile from './pages/Profile'
@@ -44,7 +43,6 @@ function App() {
 
         {/* Публичные */}
         <Route path="/login" element={<RequireGuest><Login /></RequireGuest>} />
-        <Route path="/register" element={<RequireGuest><Register /></RequireGuest>} />
         <Route path="/forgot-password" element={<RequireGuest><ForgotPassword /></RequireGuest>} />
 
         {/* Смена пароля */}
