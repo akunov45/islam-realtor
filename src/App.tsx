@@ -36,6 +36,11 @@ import GuestTips from './pages/guest/GuestTips'
 import GuestRequests from './pages/guest/GuestRequests'
 import GuestProfile from './pages/guest/GuestProfile'
 import GuestChangePassword from './pages/guest/GuestChangePassword'
+import Deals from './pages/Deals'
+import Agents from './pages/Agents'
+
+
+
 
 function App() {
   return (
@@ -79,6 +84,8 @@ function App() {
           <Route path="/chat" element={<RequireAuth><RequireStaff><RealtorChat /></RequireStaff></RequireAuth>} />
           <Route path="/realtor-chat" element={<RequireAuth><RequireStaff><RealtorChat /></RequireStaff></RequireAuth>} />
           <Route path="/admin-chat" element={<RequireAuth><RequireStaff><AdminChat /></RequireStaff></RequireAuth>} />
+          <Route path="/deals" element={<RequireAuth><RequireStaff><Deals /></RequireStaff></RequireAuth>} />
+          <Route path="/agents" element={<RequireAuth><RequireStaff><Agents /></RequireStaff></RequireAuth>} />
 
           {/* Только директор и суперадмин */}
           <Route path="/create-staff" element={

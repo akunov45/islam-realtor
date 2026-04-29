@@ -41,7 +41,12 @@ export interface Agent {
 }
 
 export const agentsApi = {
-    async list(params?: { department?: string; period?: string; search?: string; page?: number }): Promise<AgentKPIBrief[]> {
+    async list(params?: {
+    department?: string | undefined
+    period?: string | undefined
+    search?: string | undefined
+    page?: number | undefined
+}): Promise<AgentKPIBrief[]> {
         const { data } = await api.get('/api/agents/', { params })
         return data?.results ?? data
     },
