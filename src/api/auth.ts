@@ -13,9 +13,9 @@ export const authApi = {
     }
   },
 
-  async firstLogin(payload: { email: string; temp_password: string; new_password: string }): Promise<void> {
+ async firstLogin(payload: { email: string; old_password: string; new_password: string }): Promise<void> {
     await api.post('/api/auth/first-login/', payload)
-  },
+},
 
   async changePassword(payload: ChangePasswordRequest): Promise<void> {
     await api.post('/api/auth/change-password/', payload)

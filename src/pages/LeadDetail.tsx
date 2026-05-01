@@ -285,16 +285,50 @@ export default function LeadDetail() {
                         </div>
 
                         {/* Score detail */}
-                        {lead.score_detail && (
-                            <div className="ai-block">
-                                <div className="ai-block__label">Score Detail</div>
-                                <div className="ai-block__text" style={{ fontSize: 12 }}>
-                                    <pre style={{ margin: 0, fontFamily: "inherit", whiteSpace: "pre-wrap", color: "var(--text-secondary)" }}>
-                                        {JSON.stringify(lead.score_detail as Record<string, unknown>, null, 2)}
-                                    </pre>
+                        {lead.score_detail && (() => {
+                            const sd = lead.score_detail as {
+                                budget?: number
+                                urgency?: number
+                                intent?: number
+                                engagement?: number
+                                updated_at?: string
+                            }
+                            return (
+                                <div className="g-card">
+                                    <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
+                                        Детали скоринга
+                                    </h3>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                        {[
+                                            { label: "Бюджет ($)", value: sd.budget, max: null },
+                                            { label: "Срочность", value: sd.urgency, max: 10 },
+                                            { label: "Намерение", value: sd.intent, max: 10 },
+                                            { label: "Активность", value: sd.engagement, max: 10 },
+                                        ].map(row => row.value !== undefined ? (
+                                            <div key={row.label}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                                                    <span style={{ color: "var(--text-secondary)" }}>{row.label}</span>
+                                                    <span style={{ fontWeight: 700, color: "var(--accent)" }}>
+                                                        {row.value}{row.max ? `/${row.max}` : ''}
+                                                    </span>
+                                                </div>
+                                                {row.max && (
+                                                    <div className="progress-bar">
+                                                        <div className="progress-bar__fill"
+                                                            style={{ width: `${((row.value) / row.max) * 100}%` }} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : null)}
+                                        {sd.updated_at && (
+                                            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                                                Обновлено: {formatDate(sd.updated_at)}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )
+                        })()}
                     </div>
 
                     {/* Right */}

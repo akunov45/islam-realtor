@@ -38,9 +38,14 @@ export const leadsApi = {
     await api.post(`/api/leads/${id}/add-task/`, payload)
   },
 
-  async interactProperty(id: number, property_id: string): Promise<void> {
-    await api.post(`/api/leads/${id}/interact-property/`, { property_id })
-  },
+  async interactProperty(id: number, payload: {
+    external_id: string
+    title?: string | undefined
+    price?: string | undefined
+    status: "viewed" | "liked" | "disliked" | "requested"
+}): Promise<void> {
+    await api.post(`/api/leads/${id}/interact-property/`, payload)
+},
 
   async stats(): Promise<unknown> {
     const { data } = await api.get('/api/leads/stats/')

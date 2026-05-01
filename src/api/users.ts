@@ -1,9 +1,21 @@
 import { api } from './client'
 import type { User } from '../types/api'
 
+// UserListResponse возвращает { success, message, data: User[] }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function unwrap<T>(data: any): T {
   return data?.data ?? data
+}
+
+export type CreateStaffRole = 'agent' | 'director'
+
+export interface CreateStaffPayload {
+  email: string
+  first_name: string
+  last_name?: string | undefined
+  phone?: string | null | undefined
+  inn: string
+  role?: CreateStaffRole | undefined
 }
 
 export const usersApi = {
@@ -19,15 +31,16 @@ export const usersApi = {
 
   async list(): Promise<User[]> {
     const { data } = await api.get('/api/users/')
+    // UserListResponse: { success, message, data: User[] }
     return unwrap<User[]>(data)
   },
 
-  async createUser(payload: { email: string; role: string; first_name: string; last_name?: string }): Promise<User> {
+  async createStaff(payload: CreateStaffPayload): Promise<User> {
     const { data } = await api.post('/api/users/create/', payload)
     return unwrap<User>(data)
   },
 
-  async toggleBlock(id: string): Promise<void> {
+  async toggleBlock(id: number): Promise<void> {
     await api.post(`/api/users/${id}/toggle-block/`)
   },
 }

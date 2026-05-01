@@ -38,6 +38,12 @@ import GuestProfile from './pages/guest/GuestProfile'
 import GuestChangePassword from './pages/guest/GuestChangePassword'
 import Deals from './pages/Deals'
 import Agents from './pages/Agents'
+import Tasks from './pages/Tasks'
+import Properties from './pages/Properties'
+
+<Route path="/properties" element={<RequireAuth><RequireStaff><Properties /></RequireStaff></RequireAuth>} />
+
+
 
 
 
@@ -86,6 +92,8 @@ function App() {
           <Route path="/admin-chat" element={<RequireAuth><RequireStaff><AdminChat /></RequireStaff></RequireAuth>} />
           <Route path="/deals" element={<RequireAuth><RequireStaff><Deals /></RequireStaff></RequireAuth>} />
           <Route path="/agents" element={<RequireAuth><RequireStaff><Agents /></RequireStaff></RequireAuth>} />
+          <Route path="/tasks" element={<RequireAuth><RequireStaff><Tasks /></RequireStaff></RequireAuth>} />
+          <Route path="/properties" element={<RequireAuth><RequireStaff><Properties /></RequireStaff></RequireAuth>} />
 
           {/* Только директор и суперадмин */}
           <Route path="/create-staff" element={
