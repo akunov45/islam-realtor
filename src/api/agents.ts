@@ -15,6 +15,27 @@ export interface AgentKPIBrief {
     period: string
 }
 
+export interface AgentKPIFull {
+    agent_id: number
+    email: string
+    full_name: string
+    department: string
+    team: string
+    hire_date?: string | null | undefined
+    total_deals: number
+    closed_deals: number
+    failed_deals: number
+    in_progress_deals: number
+    conversion_rate: number
+    total_revenue: string
+    avg_deal_value: string
+    avg_commission: string
+    deals_this_week: number
+    deals_this_month: number
+    rating: number
+    period: string
+}
+
 export interface TeamStats {
     total_agents: number
     avg_conversion_rate: number
@@ -23,55 +44,51 @@ export interface TeamStats {
     top_agent_id: number | null
 }
 
-export interface Agent {
-    id: number
-    email: string
-    full_name?: string
-    first_name?: string
-    last_name?: string
-    phone_number?: string | null
-    department?: string
-    team?: string
-    agent_profile?: {
-        agency_name?: string
-        license_number?: string
-        experience_years?: number
-        rating?: string
-    }
+export interface AgentProfilePayload {
+    agency_name?: string | undefined
+    license_number?: string | undefined
+    experience_years?: number | undefined
 }
 
 export const agentsApi = {
     async list(params?: {
-    department?: string | undefined
-    period?: string | undefined
-    search?: string | undefined
-    page?: number | undefined
-}): Promise<AgentKPIBrief[]> {
+        department?: string | undefined
+        period?: string | undefined
+        search?: string | undefined
+        page?: number | undefined
+    }): Promise<AgentKPIBrief[]> {
         const { data } = await api.get('/api/agents/', { params })
-        return data?.results ?? data
+        return data?.results ?? data ?? []
     },
 
-    async get(id: number): Promise<Agent> {
+    async get(id: number): Promise<AgentKPIBrief> {
         const { data } = await api.get(`/api/agents/${id}/`)
         return data
     },
 
-    async getStats(id: number): Promise<AgentKPIBrief> {
-        const { data } = await api.get(`/api/agents/${id}/stats/`)
-        return data
-    },
+  async getStats(id: number): Promise<AgentKPIFull> {
+    const { data } = await api.get(`/api/agents/${id}/stats/`)
+    return data?.data ?? data
+},
 
-    async updateProfile(id: number, payload: Partial<Agent['agent_profile']>): Promise<void> {
+    async updateProfile(id: number, payload: AgentProfilePayload): Promise<void> {
         await api.patch(`/api/agents/${id}/profile/`, payload)
     },
 
-    async teamStats(params?: { department?: string; period?: string }): Promise<TeamStats> {
+    async teamStats(params?: {
+        department?: string | undefined
+        period?: string | undefined
+    }): Promise<TeamStats> {
         const { data } = await api.get('/api/agents/team-stats/', { params })
         return data
     },
 
-    async top(params?: { department?: string; period?: string; limit?: number }): Promise<AgentKPIBrief[]> {
+    async top(params?: {
+        department?: string | undefined
+        period?: string | undefined
+        limit?: number | undefined
+    }): Promise<AgentKPIBrief[]> {
         const { data } = await api.get('/api/agents/top/', { params })
-        return data?.results ?? data
+        return data?.results ?? data ?? []
     },
 }

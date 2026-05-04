@@ -40,7 +40,7 @@ export const usersApi = {
     return unwrap<User>(data)
   },
 
-  async toggleBlock(id: number): Promise<void> {
+  async toggleBlock(id: string | number): Promise<void> {
     await api.post(`/api/users/${id}/toggle-block/`)
-  },
+},
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import AppLayout from "../components/AppLayout"
 import { agentsApi } from "../api/agents"
-import type { AgentKPIBrief, TeamStats } from "../api/agents"
+import type { AgentKPIBrief, AgentKPIFull, TeamStats } from "../api/agents"
 
 function formatMoney(val?: string | number | null) {
     if (!val) return "—"
@@ -18,12 +18,19 @@ function RatingStars({ rating }: { rating: number }) {
         <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
             {[1, 2, 3, 4, 5].map(i => (
                 <svg key={i} width="12" height="12" viewBox="0 0 24 24"
-                    fill={i <= full ? "#f59e0b" : "none"}
-                    stroke="#f59e0b" strokeWidth="2">
+                    fill={i <= full ? "#f59e0b" : "none"} stroke="#f59e0b" strokeWidth="2">
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
             ))}
             <span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 3 }}>{rating.toFixed(1)}</span>
+        </div>
+    )
+}
+
+function ProgressBar({ value }: { value: number }) {
+    return (
+        <div className="progress-bar">
+            <div className="progress-bar__fill" style={{ width: `${Math.min(value, 100)}%` }} />
         </div>
     )
 }
@@ -36,6 +43,15 @@ export default function Agents() {
     const [period, setPeriod] = useState<"week" | "month" | "quarter" | "all">("month")
     const [search, setSearch] = useState("")
     const [sortBy, setSortBy] = useState<"revenue" | "deals" | "conversion" | "rating">("revenue")
+    const [toast, setToast] = useState("")
+
+    const [detailAgent, setDetailAgent] = useState<AgentKPIFull | null>(null)
+    const [detailLoading, setDetailLoading] = useState(false)
+    const [editAgent, setEditAgent] = useState<AgentKPIBrief | null>(null)
+    const [editForm, setEditForm] = useState({ agency_name: "", license_number: "", experience_years: "" })
+    const [editSaving, setEditSaving] = useState(false)
+
+    const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000) }
 
     const fetchAgents = useCallback(async () => {
         setLoading(true)
@@ -55,6 +71,41 @@ export default function Agents() {
     }, [period, search])
 
     useEffect(() => { fetchAgents() }, [fetchAgents])
+
+    const handleOpenDetail = async (agent: AgentKPIBrief) => {
+        setDetailLoading(true)
+        setDetailAgent(null)
+        try {
+            const full = await agentsApi.getStats(agent.agent_id)
+            setDetailAgent(full)
+        } catch {
+            showToast("Ошибка загрузки KPI агента")
+            setDetailLoading(false)
+        }
+    }
+
+    const handleOpenEdit = (agent: AgentKPIBrief) => {
+        setEditAgent(agent)
+        setEditForm({ agency_name: "", license_number: "", experience_years: "" })
+    }
+
+    const handleSaveProfile = async () => {
+        if (!editAgent) return
+        setEditSaving(true)
+        try {
+            await agentsApi.updateProfile(editAgent.agent_id, {
+                agency_name: editForm.agency_name || undefined,
+                license_number: editForm.license_number || undefined,
+                experience_years: editForm.experience_years ? parseInt(editForm.experience_years) : undefined,
+            })
+            showToast("Профиль обновлён!")
+            setEditAgent(null)
+        } catch {
+            showToast("Ошибка сохранения профиля")
+        } finally {
+            setEditSaving(false)
+        }
+    }
 
     const sorted = [...agents].sort((a, b) => {
         if (sortBy === "revenue") return parseFloat(b.total_revenue) - parseFloat(a.total_revenue)
@@ -99,14 +150,9 @@ export default function Agents() {
             {/* Filters */}
             <div className="g-card" style={{ marginBottom: 16 }}>
                 <div className="filters-row">
-                    <input
-                        className="form-input"
-                        style={{ width: 220 }}
-                        placeholder="Поиск по имени..."
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && fetchAgents()}
-                    />
+                    <input className="form-input" style={{ width: 220 }} placeholder="Поиск по имени..."
+                        value={search} onChange={e => setSearch(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && fetchAgents()} />
                     <select className="form-select" style={{ width: 170 }} value={sortBy}
                         onChange={e => setSortBy(e.target.value as typeof sortBy)}>
                         <option value="revenue">По выручке</option>
@@ -115,7 +161,10 @@ export default function Agents() {
                         <option value="rating">По рейтингу</option>
                     </select>
                     <button className="btn btn--outline btn--sm" onClick={fetchAgents}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" strokeLinecap="round" /></svg>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="23 4 23 10 17 10" />
+                            <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" strokeLinecap="round" />
+                        </svg>
                         Обновить
                     </button>
                     <span style={{ marginLeft: "auto", fontSize: 13, color: "var(--text-muted)" }}>
@@ -124,9 +173,7 @@ export default function Agents() {
                 </div>
             </div>
 
-            {error && (
-                <div style={{ padding: "12px 16px", color: "#ef4444", fontSize: 13, marginBottom: 16 }}>⚠ {error}</div>
-            )}
+            {error && <div style={{ padding: "12px 16px", color: "#ef4444", fontSize: 13, marginBottom: 16 }}>⚠ {error}</div>}
 
             {/* Agents grid */}
             {loading ? (
@@ -142,29 +189,17 @@ export default function Agents() {
                         const isTop = index === 0 && sortBy === "revenue"
                         return (
                             <div key={agent.agent_id} className="g-card" style={{
-                                border: isTop ? `2px solid var(--accent)` : "1px solid var(--border-color)",
+                                border: isTop ? "2px solid var(--accent)" : "1px solid var(--border-color)",
                                 position: "relative", overflow: "hidden",
                             }}>
                                 {isTop && (
-                                    <div style={{
-                                        position: "absolute", top: 0, right: 0,
-                                        background: "var(--accent)", color: "white",
-                                        fontSize: 10, fontWeight: 700, padding: "3px 10px",
-                                        borderBottomLeftRadius: 8,
-                                    }}>
+                                    <div style={{ position: "absolute", top: 0, right: 0, background: "var(--accent)", color: "white", fontSize: 10, fontWeight: 700, padding: "3px 10px", borderBottomLeftRadius: 8 }}>
                                         ★ Топ
                                     </div>
                                 )}
 
-                                {/* Header */}
                                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
-                                    <div style={{
-                                        width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
-                                        background: isTop ? "linear-gradient(135deg,#0d9488,#14b8a6)" : "var(--accent-light)",
-                                        color: isTop ? "white" : "var(--accent)",
-                                        display: "flex", alignItems: "center", justifyContent: "center",
-                                        fontSize: 16, fontWeight: 800,
-                                    }}>
+                                    <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, background: isTop ? "linear-gradient(135deg,#0d9488,#14b8a6)" : "var(--accent-light)", color: isTop ? "white" : "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>
                                         {agent.full_name?.charAt(0) ?? "?"}
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -180,7 +215,6 @@ export default function Agents() {
                                     </div>
                                 </div>
 
-                                {/* KPI grid */}
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
                                     {[
                                         { label: "Выручка", value: formatMoney(agent.total_revenue), color: "var(--accent)", big: true },
@@ -189,35 +223,32 @@ export default function Agents() {
                                         { label: "Закрытых", value: String(agent.closed_deals), color: "#10b981" },
                                         { label: "В работе", value: String(agent.in_progress_deals), color: "#f59e0b" },
                                     ].map(kpi => (
-                                        <div key={kpi.label} style={{
-                                            padding: "8px 10px", background: "var(--bg-tertiary)",
-                                            borderRadius: 8, border: "1px solid var(--border-light)",
-                                        }}>
-                                            <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 3 }}>
-                                                {kpi.label}
-                                            </div>
-                                            <div style={{ fontSize: kpi.big ? 16 : 14, fontWeight: 700, color: kpi.color }}>
-                                                {kpi.value}
-                                            </div>
+                                        <div key={kpi.label} style={{ padding: "8px 10px", background: "var(--bg-tertiary)", borderRadius: 8, border: "1px solid var(--border-light)" }}>
+                                            <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 3 }}>{kpi.label}</div>
+                                            <div style={{ fontSize: kpi.big ? 16 : 14, fontWeight: 700, color: kpi.color }}>{kpi.value}</div>
                                         </div>
                                     ))}
                                 </div>
 
-                                {/* Progress bar конверсии */}
-                                <div>
+                                <div style={{ marginBottom: 14 }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>
                                         <span>Конверсия</span>
-                                        <span style={{ color: "var(--accent)", fontWeight: 600 }}>
-                                            {(agent.conversion_rate * 100).toFixed(1)}%
-                                        </span>
+                                        <span style={{ color: "var(--accent)", fontWeight: 600 }}>{(agent.conversion_rate * 100).toFixed(1)}%</span>
                                     </div>
-                                    <div className="progress-bar">
-                                        <div className="progress-bar__fill"
-                                            style={{ width: `${Math.min(agent.conversion_rate * 100, 100)}%` }} />
-                                    </div>
+                                    <ProgressBar value={agent.conversion_rate * 100} />
                                 </div>
 
-                                {/* Period badge */}
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <button className="btn btn--outline btn--sm" style={{ flex: 1 }}
+                                        onClick={() => handleOpenDetail(agent)}>
+                                        Полный KPI
+                                    </button>
+                                    <button className="btn btn--primary btn--sm" style={{ flex: 1 }}
+                                        onClick={() => handleOpenEdit(agent)}>
+                                        Профиль
+                                    </button>
+                                </div>
+
                                 <div style={{ marginTop: 10, textAlign: "right" }}>
                                     <span style={{ fontSize: 10, color: "var(--text-muted)", background: "var(--bg-hover)", padding: "2px 8px", borderRadius: 10 }}>
                                         {agent.period}
@@ -228,6 +259,112 @@ export default function Agents() {
                     })}
                 </div>
             )}
+
+            {/* Detail KPI Modal */}
+            {(detailAgent || detailLoading) && (
+                <div className="modal-overlay" onClick={() => { setDetailAgent(null); setDetailLoading(false) }}>
+                    <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal__header">
+                            <div className="modal__title">
+                                {detailLoading ? "Загрузка..." : `KPI — ${detailAgent?.full_name}`}
+                            </div>
+                            <button className="modal__close" onClick={() => { setDetailAgent(null); setDetailLoading(false) }}>✕</button>
+                        </div>
+
+                        {detailLoading ? (
+                            <div style={{ padding: "30px 0", textAlign: "center", color: "var(--text-muted)" }}>Загрузка...</div>
+                        ) : detailAgent && (
+                            <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 20, padding: 14, background: "var(--bg-tertiary)", borderRadius: 12 }}>
+                                    <div style={{ width: 48, height: 48, borderRadius: "50%", background: "linear-gradient(135deg,#0d9488,#14b8a6)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, flexShrink: 0 }}>
+                                        {detailAgent.full_name?.charAt(0) ?? "?"}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>{detailAgent.full_name}</div>
+                                        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{detailAgent.department} · {detailAgent.team}</div>
+                                        {detailAgent.hire_date && (
+                                            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                                                Найм: {new Date(detailAgent.hire_date).toLocaleDateString("ru-RU")}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <RatingStars rating={detailAgent.rating} />
+                                </div>
+
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
+                                    {[
+                                        { label: "Всего сделок", value: String(detailAgent.total_deals), color: "var(--text-primary)" },
+                                        { label: "Закрытых", value: String(detailAgent.closed_deals), color: "#10b981" },
+                                        { label: "В работе", value: String(detailAgent.in_progress_deals), color: "#f59e0b" },
+                                        { label: "Провалено", value: String(detailAgent.failed_deals), color: "#ef4444" },
+                                        { label: "За неделю", value: String(detailAgent.deals_this_week), color: "var(--accent)" },
+                                        { label: "За месяц", value: String(detailAgent.deals_this_month), color: "var(--accent)" },
+                                        { label: "Выручка", value: formatMoney(detailAgent.total_revenue), color: "var(--accent)" },
+                                        { label: "Ср. сделка", value: formatMoney(detailAgent.avg_deal_value), color: "var(--text-secondary)" },
+                                        { label: "Ср. комиссия", value: formatMoney(detailAgent.avg_commission), color: "#10b981" },
+                                    ].map(kpi => (
+                                        <div key={kpi.label} style={{ padding: "10px 12px", background: "var(--bg-tertiary)", borderRadius: 9, border: "1px solid var(--border-light)" }}>
+                                            <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>{kpi.label}</div>
+                                            <div style={{ fontSize: 15, fontWeight: 700, color: kpi.color }}>{kpi.value}</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div style={{ padding: "12px 14px", background: "var(--accent-light)", borderRadius: 10 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+                                        <span style={{ color: "var(--accent-text)", fontWeight: 600 }}>Конверсия</span>
+                                        <span style={{ fontWeight: 800, color: "var(--accent)", fontSize: 16 }}>
+                                            {(detailAgent.conversion_rate * 100).toFixed(1)}%
+                                        </span>
+                                    </div>
+                                    <ProgressBar value={detailAgent.conversion_rate * 100} />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="modal__footer">
+                            <button className="btn btn--outline" onClick={() => { setDetailAgent(null); setDetailLoading(false) }}>Закрыть</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Profile Modal */}
+            {editAgent && (
+                <div className="modal-overlay" onClick={() => setEditAgent(null)}>
+                    <div className="modal" onClick={e => e.stopPropagation()}>
+                        <div className="modal__header">
+                            <div className="modal__title">Профиль — {editAgent.full_name}</div>
+                            <button className="modal__close" onClick={() => setEditAgent(null)}>✕</button>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                            <div className="form-group">
+                                <label className="form-label">Название агентства</label>
+                                <input className="form-input" placeholder="RealtorAI" value={editForm.agency_name}
+                                    onChange={e => setEditForm(f => ({ ...f, agency_name: e.target.value }))} autoFocus />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Номер лицензии</label>
+                                <input className="form-input" placeholder="LIC-123456" value={editForm.license_number}
+                                    onChange={e => setEditForm(f => ({ ...f, license_number: e.target.value }))} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Опыт работы (лет)</label>
+                                <input className="form-input" type="number" min="0" placeholder="5" value={editForm.experience_years}
+                                    onChange={e => setEditForm(f => ({ ...f, experience_years: e.target.value }))} />
+                            </div>
+                        </div>
+                        <div className="modal__footer">
+                            <button className="btn btn--outline" onClick={() => setEditAgent(null)}>Отмена</button>
+                            <button className="btn btn--primary" onClick={handleSaveProfile} disabled={editSaving}>
+                                {editSaving ? "Сохранение..." : "Сохранить"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {toast && <div className="toast toast--success">✓ {toast}</div>}
         </AppLayout>
     )
 }
