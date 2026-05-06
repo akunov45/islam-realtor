@@ -13,14 +13,10 @@ import Leads from './pages/Leads'
 import LeadDetail from './pages/LeadDetail'
 import Dialogs from './pages/Dialogs'
 import Scoring from './pages/Scoring'
-import Tags from './pages/Tags'
 import Settings from './pages/Settings'
 import Messages from './pages/Messages'
-import Crontab from './pages/Crontab'
-import Astronomy from './pages/Astronomy'
-import Time from './pages/Time'
-import RealtorChat from './pages/RealtorChat'
-import AdminChat from './pages/AdminChat'
+
+
 
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
@@ -82,14 +78,7 @@ function App() {
           <Route path="/dialogs" element={<RequireAuth><RequireStaff><Dialogs /></RequireStaff></RequireAuth>} />
           <Route path="/scoring" element={<RequireAuth><RequireStaff><Scoring /></RequireStaff></RequireAuth>} />
           <Route path="/messages" element={<RequireAuth><RequireStaff><Messages /></RequireStaff></RequireAuth>} />
-          <Route path="/tags" element={<RequireAuth><RequireStaff><Tags /></RequireStaff></RequireAuth>} />
-          <Route path="/crontab" element={<RequireAuth><RequireStaff><Crontab /></RequireStaff></RequireAuth>} />
-          <Route path="/astronomy" element={<RequireAuth><RequireStaff><Astronomy /></RequireStaff></RequireAuth>} />
-          <Route path="/time" element={<RequireAuth><RequireStaff><Time /></RequireStaff></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth><RequireStaff><Settings /></RequireStaff></RequireAuth>} />
-          <Route path="/chat" element={<RequireAuth><RequireStaff><RealtorChat /></RequireStaff></RequireAuth>} />
-          <Route path="/realtor-chat" element={<RequireAuth><RequireStaff><RealtorChat /></RequireStaff></RequireAuth>} />
-          <Route path="/admin-chat" element={<RequireAuth><RequireStaff><AdminChat /></RequireStaff></RequireAuth>} />
           <Route path="/deals" element={<RequireAuth><RequireStaff><Deals /></RequireStaff></RequireAuth>} />
           <Route path="/agents" element={<RequireAuth><RequireStaff><Agents /></RequireStaff></RequireAuth>} />
           <Route path="/tasks" element={<RequireAuth><RequireStaff><Tasks /></RequireStaff></RequireAuth>} />

@@ -52,8 +52,6 @@ const sections: NavSection[] = [
         label: "Система",
         items: [
             { label: "Сообщения", path: "/messages", icon: <Icon d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zM22 6l-10 7L2 6" /> },
-            { label: "Теги", path: "/tags", icon: <Icon d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82zM7 7h.01" /> },
-            { label: "Crontab", path: "/crontab", icon: <Icon d="M12 2a10 10 0 100 20A10 10 0 0012 2zM12 6v6l4 2" /> },
             { label: "Воронка", path: "/pipeline", icon: <Icon d="M22 12H3M22 12l-4-4M22 12l-4 4M3 12l4-4M3 12l4 4" /> },
         ]
     }
