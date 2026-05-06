@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from './store/themeStore'
 import './global.css'
 import './chat-pages.css'
@@ -40,8 +40,8 @@ import Deals from './pages/Deals'
 import Agents from './pages/Agents'
 import Tasks from './pages/Tasks'
 import Properties from './pages/Properties'
+import PipelineStages from './pages/PipelineStages'
 
-<Route path="/properties" element={<RequireAuth><RequireStaff><Properties /></RequireStaff></RequireAuth>} />
 
 
 
@@ -94,6 +94,9 @@ function App() {
           <Route path="/agents" element={<RequireAuth><RequireStaff><Agents /></RequireStaff></RequireAuth>} />
           <Route path="/tasks" element={<RequireAuth><RequireStaff><Tasks /></RequireStaff></RequireAuth>} />
           <Route path="/properties" element={<RequireAuth><RequireStaff><Properties /></RequireStaff></RequireAuth>} />
+          <Route path="/pipeline" element={<RequireAuth><RequireStaff><PipelineStages /></RequireStaff></RequireAuth>} />
+
+
 
           {/* Только директор и суперадмин */}
           <Route path="/create-staff" element={
