@@ -1,16 +1,13 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../store/authStore'
 
-const GUEST_ROLES = ['buyer', 'seller']
-const isGuest = (role?: string) => GUEST_ROLES.includes(role ?? '')
-
 export function RequireAuth({ children }: { children: React.ReactNode }) {
     const { isAuthenticated, loading, user } = useAuth()
     const location = useLocation()
 
     if (loading) {
         return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#f0fdf9' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-secondary)' }}>
                 <div style={{ fontSize: 13, color: '#0d9488' }}>Загрузка...</div>
             </div>
         )
@@ -26,25 +23,15 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 export function RequireGuest({ children }: { children: React.ReactNode }) {
-    const { isAuthenticated, loading, user } = useAuth()
+    const { isAuthenticated, loading } = useAuth()
     if (loading) return null
-    if (isAuthenticated) {
-        return <Navigate to={isGuest(user?.role) ? '/guest' : '/dashboard'} replace />
-    }
+    if (isAuthenticated) return <Navigate to="/dashboard" replace />
     return <>{children}</>
 }
 
-// guest=true  → только buyer/seller (гостевой портал)
-// guest=false → только персонал (staff)
-export function RequireStaff({ children, guest = false }: { children: React.ReactNode; guest?: boolean }) {
+export function RequireStaff({ children }: { children: React.ReactNode }) {
     const { user } = useAuth()
     if (!user) return <Navigate to="/login" replace />
-
-    const userIsGuest = isGuest(user.role)
-
-    if (guest && !userIsGuest) return <Navigate to="/dashboard" replace />
-    if (!guest && userIsGuest) return <Navigate to="/guest" replace />
-
     return <>{children}</>
 }
 
@@ -58,6 +45,5 @@ export function RootRedirect() {
     const { user, loading } = useAuth()
     if (loading) return null
     if (!user) return <Navigate to="/login" replace />
-    if (isGuest(user.role)) return <Navigate to="/guest" replace />
     return <Navigate to="/dashboard" replace />
 }
