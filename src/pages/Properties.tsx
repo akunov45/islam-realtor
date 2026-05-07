@@ -144,15 +144,19 @@ export default function Properties() {
 
                             {/* Image placeholder */}
                             <div style={{
-                                height: 160, background: "linear-gradient(135deg, var(--accent-light), var(--bg-hover))",
+                                height: 160,
+                                background: prop.coverImage
+                                    ? `url(${prop.coverImage}) center/cover no-repeat`
+                                    : "linear-gradient(135deg, var(--accent-light), var(--bg-hover))",
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 position: "relative",
                             }}>
-                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" opacity="0.5">
-                                    <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                                    <polyline points="9 22 9 12 15 12 15 22" />
-                                </svg>
-
+                                {!prop.coverImage && (
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" opacity="0.5">
+                                        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                                        <polyline points="9 22 9 12 15 12 15 22" />
+                                    </svg>
+                                )}
                                 {prop.rooms && (
                                     <div style={{
                                         position: "absolute", top: 10, left: 10,
