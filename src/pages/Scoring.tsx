@@ -1,36 +1,34 @@
 import { useState, useEffect } from "react"
 import AppLayout from "../components/AppLayout"
-import { leadsApi } from "../api/leads"
-import { kpiApi } from "../api/kpi"
+import { api } from "../api/client"
 
-interface LeadStats {
-    total: number; new: number; in_progress: number
-    won: number; lost: number; hot: number; cold: number; avg_score: number
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface AdminAnalytics {
+    period: string
+    group_by: string
+    funnel: {
+        new: number; in_progress: number; won: number; lost: number
+        conversion_rate: number
+        drop_rate: { new_to_in_progress: number; in_progress_to_won: number }
+    }
+    revenue: {
+        total: string; avg_deal: string
+        by_period: { period: string; revenue: string; deals: number }[]
+    }
+    sources: { source: string; leads: number; won: number; conversion: number }[]
+    pipeline_distribution: { stage: string; count: number }[]
+    avg_time_to_close_days: number
 }
 
-interface AgentKPI {
-    agent_id: number
-    full_name: string
-    email: string
-    department: string
-    team: string
-    total_deals: number
-    closed_deals: number
-    in_progress_deals: number
-    failed_deals?: number
-    conversion_rate: number
-    total_revenue: string
-    avg_deal_value?: string
-    avg_commission?: string
-    deals_this_week?: number
-    deals_this_month?: number
-    rating: number
-    period: string
-    hire_date?: string | null
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const SOURCE_LABELS: Record<string, string> = {
+    telegram: "Telegram", whatsapp: "WhatsApp", instagram: "Instagram", manual: "Ручной ввод",
 }
 
 function formatMoney(val?: string | number | null) {
-    if (!val && val !== 0) return "—"
+    if (!val) return "—"
     const n = parseFloat(String(val))
     if (isNaN(n) || n === 0) return "—"
     if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
@@ -38,300 +36,250 @@ function formatMoney(val?: string | number | null) {
     return `$${n.toFixed(0)}`
 }
 
-function RatingBar({ value, max = 5 }: { value: number; max?: number }) {
-    const pct = Math.min((value / max) * 100, 100)
+function pct(val: number) {
+    return `${(val * 100).toFixed(1)}%`
+}
+
+// ─── Simple bar chart ─────────────────────────────────────────────────────────
+
+function MiniBarChart({ data }: { data: { label: string; value: number; color?: string }[] }) {
+    const max = Math.max(...data.map(d => d.value), 1)
     return (
-        <div className="progress-bar">
-            <div className="progress-bar__fill" style={{ width: `${pct}%` }} />
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 80 }}>
+            {data.map((d, i) => (
+                <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600 }}>
+                        {d.value > 0 ? (d.value >= 1000 ? `${(d.value / 1000).toFixed(0)}K` : String(d.value)) : ""}
+                    </div>
+                    <div style={{
+                        width: "100%", borderRadius: "4px 4px 0 0",
+                        background: d.color ?? "var(--accent)",
+                        height: `${Math.max((d.value / max) * 60, d.value > 0 ? 4 : 0)}px`,
+                        transition: "height 0.3s",
+                    }} />
+                    <div style={{ fontSize: 9, color: "var(--text-muted)", textAlign: "center", wordBreak: "break-all" }}>
+                        {d.label}
+                    </div>
+                </div>
+            ))}
         </div>
     )
 }
 
+// ─── Funnel step ──────────────────────────────────────────────────────────────
+
+function FunnelStep({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
+    const pct = total > 0 ? Math.round((value / total) * 100) : 0
+    const width = Math.max(pct, 5)
+    return (
+        <div style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 5 }}>
+                <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>{label}</span>
+                <span style={{ fontWeight: 700, color }}>
+                    {value} <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>({pct}%)</span>
+                </span>
+            </div>
+            <div style={{ height: 8, background: "var(--bg-hover)", borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${width}%`, background: color, borderRadius: 4, transition: "width 0.4s" }} />
+            </div>
+        </div>
+    )
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
 export default function Scoring() {
-    const [leadStats, setLeadStats] = useState<LeadStats | null>(null)
-    const [kpiData, setKpiData] = useState<AgentKPI[]>([])
+    const [data, setData] = useState<AdminAnalytics | null>(null)
     const [loading, setLoading] = useState(true)
-    const [period, setPeriod] = useState<"all" | "day" | "week" | "month">("month")
-    const [activeTab, setActiveTab] = useState<"overview" | "agents">("overview")
+    const [error, setError] = useState("")
+    const [period, setPeriod] = useState<"day" | "week" | "month" | "quarter" | "all">("month")
+    const groupBy = period === "day" || period === "week" ? "week" : "month"
 
     useEffect(() => {
         const load = async () => {
             setLoading(true)
+            setError("")
             try {
-                const [stats, kpi] = await Promise.all([
-                    leadsApi.stats(),
-                    kpiApi.leadKpis({ period }),
-                ])
-                setLeadStats(stats as LeadStats)
-                // KPI может быть массивом или объектом
-                if (Array.isArray(kpi)) setKpiData(kpi)
-                else if (Array.isArray((kpi as { results?: AgentKPI[] })?.results)) setKpiData((kpi as { results: AgentKPI[] }).results)
-                else if (kpi && typeof kpi === 'object') setKpiData([kpi as AgentKPI])
-                else setKpiData([])
-            } catch (e) {
-                console.error(e)
+                const { data: res } = await api.get('/api/v2/admin/analytics/', { params: { period, group_by: groupBy } })
+                setData(res)
+            } catch {
+                setError("Ошибка загрузки аналитики")
             } finally {
                 setLoading(false)
             }
         }
         load()
-    }, [period])
+    }, [period, groupBy])
 
-    const total = leadStats?.total || 1
-    const hot = leadStats?.hot ?? 0
-    const warm = (leadStats?.in_progress ?? 0)
-    const cold = leadStats?.cold ?? 0
+    const funnel = data?.funnel
+    const revenue = data?.revenue
+    const sources = data?.sources ?? []
+    const pipeline = data?.pipeline_distribution ?? []
+    const totalLeads = funnel ? (funnel.new + funnel.in_progress + funnel.won + funnel.lost) : 0
 
     return (
         <AppLayout
-            title="Скоринг и KPI"
-            breadcrumbs={[{ label: "Дашборд", path: "/dashboard" }, { label: "Скоринг" }]}
+            title="Аналитика"
+            breadcrumbs={[{ label: "Дашборд", path: "/dashboard" }, { label: "Аналитика" }]}
             actions={
-                <select className="form-select" style={{ width: 140, height: 34, fontSize: 13 }}
-                    value={period} onChange={e => setPeriod(e.target.value as typeof period)}>
-                    <option value="day">День</option>
-                    <option value="week">Неделя</option>
-                    <option value="month">Месяц</option>
-                    <option value="all">Всё время</option>
-                </select>
+                <div style={{ display: "flex", gap: 8 }}>
+                    <select className="form-select" style={{ width: 140, height: 34, fontSize: 13 }}
+                        value={period} onChange={e => setPeriod(e.target.value as typeof period)}>
+                        <option value="day">День</option>
+                        <option value="week">Неделя</option>
+                        <option value="month">Месяц</option>
+                        <option value="quarter">Квартал</option>
+                        <option value="all">Всё время</option>
+                    </select>
+                </div>
             }
         >
-            {/* Tabs */}
-            <div className="tabs" style={{ marginBottom: 20 }}>
-                <button className={`tab-btn ${activeTab === "overview" ? "tab-btn--active" : ""}`} onClick={() => setActiveTab("overview")}>
-                    Обзор лидов
-                </button>
-                <button className={`tab-btn ${activeTab === "agents" ? "tab-btn--active" : ""}`} onClick={() => setActiveTab("agents")}>
-                    KPI агентов
-                    {kpiData.length > 0 && (
-                        <span style={{ marginLeft: 6, background: "var(--accent)", color: "white", borderRadius: 10, fontSize: 10, padding: "1px 6px" }}>
-                            {kpiData.length}
-                        </span>
-                    )}
-                </button>
+            {error && <div style={{ padding: "12px 16px", color: "#ef4444", fontSize: 13, marginBottom: 16 }}>⚠ {error}</div>}
+
+            {/* ── KPI Cards ── */}
+            <div className="grid-4" style={{ marginBottom: 24 }}>
+                {[
+                    { label: "Конверсия", value: loading ? "..." : pct(funnel?.conversion_rate ?? 0), color: "var(--accent)", sub: "лид → сделка" },
+                    { label: "Общая выручка", value: loading ? "..." : formatMoney(revenue?.total), color: "#10b981", sub: "за период" },
+                    { label: "Средняя сделка", value: loading ? "..." : formatMoney(revenue?.avg_deal), color: "var(--accent)", sub: "средний чек" },
+                    { label: "Среднее закрытие", value: loading ? "..." : `${data?.avg_time_to_close_days?.toFixed(1) ?? "—"} дн`, color: "#f59e0b", sub: "дней до закрытия" },
+                ].map(s => (
+                    <div className="stat-card" key={s.label}>
+                        <div className="stat-card__label">{s.label}</div>
+                        <div className="stat-card__value" style={{ color: s.color }}>{s.value}</div>
+                        <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{s.sub}</div>
+                    </div>
+                ))}
             </div>
 
-            {/* ── Overview Tab ── */}
-            {activeTab === "overview" && (
-                <>
-                    {/* Stat cards */}
-                    <div className="grid-4" style={{ marginBottom: 24 }}>
-                        {[
-                            { label: "Всего лидов", value: loading ? "..." : String(leadStats?.total ?? 0), color: "var(--text-primary)" },
-                            { label: "Средний score", value: loading ? "..." : (leadStats?.avg_score?.toFixed(1) ?? "—"), color: "var(--accent)" },
-                            { label: "Горячих", value: loading ? "..." : String(hot), color: "#ef4444" },
-                            { label: "Конверсия", value: loading ? "..." : `${((leadStats?.won ?? 0) / total * 100).toFixed(1)}%`, color: "#10b981" },
-                        ].map(s => (
-                            <div className="stat-card" key={s.label}>
-                                <div className="stat-card__label">{s.label}</div>
-                                <div className="stat-card__value" style={{ color: s.color }}>{s.value}</div>
+            {/* ── Funnel + Sources ── */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+
+                {/* Funnel */}
+                <div className="g-card">
+                    <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>Воронка лидов</h3>
+                    {loading ? <div style={{ color: "var(--text-muted)", fontSize: 13 }}>Загрузка...</div> : funnel ? (
+                        <>
+                            <FunnelStep label="Новые" value={funnel.new} total={totalLeads} color="var(--accent)" />
+                            <FunnelStep label="В работе" value={funnel.in_progress} total={totalLeads} color="#f59e0b" />
+                            <FunnelStep label="Закрытые" value={funnel.won} total={totalLeads} color="#10b981" />
+                            <FunnelStep label="Потеряны" value={funnel.lost} total={totalLeads} color="#ef4444" />
+
+                            <div style={{ marginTop: 16, padding: "12px 14px", background: "var(--bg-tertiary)", borderRadius: 10 }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                                    <div>
+                                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 3 }}>Новый → В работе</div>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: "var(--accent)" }}>
+                                            {pct(funnel.drop_rate.new_to_in_progress)}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 3 }}>В работе → Сделка</div>
+                                        <div style={{ fontSize: 15, fontWeight: 700, color: "#10b981" }}>
+                                            {pct(funnel.drop_rate.in_progress_to_won)}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        ))}
-                    </div>
+                        </>
+                    ) : null}
+                </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>
-
-                        {/* Score distribution */}
-                        <div className="g-card">
-                            <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
-                                Распределение по Score
-                            </h3>
-                            {loading ? (
-                                <div style={{ color: "var(--text-muted)", fontSize: 13 }}>Загрузка...</div>
-                            ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                                    {[
-                                        { label: "Горячие (score ≥ 70)", count: hot, color: "#ef4444" },
-                                        { label: "Тёплые (30–70)", count: warm, color: "#f59e0b" },
-                                        { label: "Холодные (< 30)", count: cold, color: "var(--accent)" },
-                                        { label: "Закрытые (won)", count: leadStats?.won ?? 0, color: "#10b981" },
-                                        { label: "Потеряны (lost)", count: leadStats?.lost ?? 0, color: "var(--text-muted)" },
-                                    ].map(s => {
-                                        const pct = Math.round((s.count / total) * 100)
+                {/* Sources */}
+                <div className="g-card">
+                    <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>Источники лидов</h3>
+                    {loading ? <div style={{ color: "var(--text-muted)", fontSize: 13 }}>Загрузка...</div>
+                        : sources.length === 0 ? <div style={{ color: "var(--text-muted)", fontSize: 13 }}>Нет данных</div>
+                            : (
+                                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                    {sources.map(s => {
+                                        const totalSources = sources.reduce((a, b) => a + b.leads, 0) || 1
+                                        const barPct = Math.round((s.leads / totalSources) * 100)
                                         return (
-                                            <div key={s.label}>
-                                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 5 }}>
-                                                    <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>{s.label}</span>
-                                                    <span style={{ fontWeight: 700, color: s.color }}>{s.count} <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>({pct}%)</span></span>
+                                            <div key={s.source}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
+                                                    <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>
+                                                        {SOURCE_LABELS[s.source] ?? s.source}
+                                                    </span>
+                                                    <div style={{ display: "flex", gap: 12, fontSize: 12 }}>
+                                                        <span style={{ color: "var(--text-muted)" }}>{s.leads} лидов</span>
+                                                        <span style={{ fontWeight: 700, color: "#10b981" }}>{pct(s.conversion)}</span>
+                                                    </div>
                                                 </div>
-                                                <div className="progress-bar">
-                                                    <div className="progress-bar__fill" style={{ width: `${pct}%`, background: s.color }} />
+                                                <div style={{ height: 6, background: "var(--bg-hover)", borderRadius: 3, overflow: "hidden" }}>
+                                                    <div style={{ height: "100%", width: `${barPct}%`, background: "var(--accent)", borderRadius: 3 }} />
                                                 </div>
                                             </div>
                                         )
                                     })}
                                 </div>
                             )}
-                        </div>
+                </div>
+            </div>
 
-                        {/* Status breakdown */}
-                        <div className="g-card">
-                            <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
-                                Статусы лидов
-                            </h3>
-                            {loading ? (
-                                <div style={{ color: "var(--text-muted)", fontSize: 13 }}>Загрузка...</div>
-                            ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                                    {[
-                                        { label: "Новые", value: leadStats?.new ?? 0, badge: "status-badge--new" },
-                                        { label: "В работе", value: leadStats?.in_progress ?? 0, badge: "status-badge--progress" },
-                                        { label: "Закрытые", value: leadStats?.won ?? 0, badge: "status-badge--done" },
-                                        { label: "Потеряны", value: leadStats?.lost ?? 0, badge: "status-badge--lost" },
-                                    ].map((row, i, arr) => (
-                                        <div key={row.label} style={{
-                                            display: "flex", justifyContent: "space-between", alignItems: "center",
-                                            padding: "10px 0", fontSize: 13,
-                                            borderBottom: i < arr.length - 1 ? "1px solid var(--border-light)" : "none",
-                                        }}>
-                                            <span style={{ color: "var(--text-secondary)" }}>{row.label}</span>
-                                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                                <div style={{ width: 80 }}>
-                                                    <div className="progress-bar" style={{ height: 4, marginBottom: 0 }}>
-                                                        <div className="progress-bar__fill" style={{ width: `${Math.round((row.value / total) * 100)}%` }} />
+            {/* ── Revenue chart + Pipeline distribution ── */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+
+                {/* Revenue by period */}
+                <div className="g-card">
+                    <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>Выручка по периодам</h3>
+                    {loading ? <div style={{ color: "var(--text-muted)", fontSize: 13 }}>Загрузка...</div>
+                        : !revenue?.by_period?.length ? <div style={{ color: "var(--text-muted)", fontSize: 13 }}>Нет данных</div>
+                            : (
+                                <>
+                                    <MiniBarChart data={revenue.by_period.map(p => ({
+                                        label: p.period,
+                                        value: parseFloat(p.revenue) || 0,
+                                        color: "var(--accent)",
+                                    }))} />
+                                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                                        {revenue.by_period.slice(-5).map(p => (
+                                            <div key={p.period} style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                                                <span style={{ color: "var(--text-secondary)" }}>{p.period}</span>
+                                                <div style={{ display: "flex", gap: 12 }}>
+                                                    <span style={{ color: "var(--text-muted)" }}>{p.deals} сделок</span>
+                                                    <span style={{ fontWeight: 700, color: "var(--accent)" }}>{formatMoney(p.revenue)}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                </div>
+
+                {/* Pipeline distribution */}
+                <div className="g-card">
+                    <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>Распределение по воронке</h3>
+                    {loading ? <div style={{ color: "var(--text-muted)", fontSize: 13 }}>Загрузка...</div>
+                        : pipeline.length === 0 ? <div style={{ color: "var(--text-muted)", fontSize: 13 }}>Нет данных</div>
+                            : (
+                                <>
+                                    <MiniBarChart data={pipeline.map((p, i) => ({
+                                        label: p.stage,
+                                        value: p.count,
+                                        color: i === 0 ? "var(--accent)" : i === pipeline.length - 1 ? "#10b981" : "#f59e0b",
+                                    }))} />
+                                    <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                                        {pipeline.map((p, i) => {
+                                            const totalPipeline = pipeline.reduce((a, b) => a + b.count, 0) || 1
+                                            const barPct = Math.round((p.count / totalPipeline) * 100)
+                                            return (
+                                                <div key={p.stage}>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
+                                                        <span style={{ color: "var(--text-secondary)" }}>{p.stage}</span>
+                                                        <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{p.count} <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>({barPct}%)</span></span>
+                                                    </div>
+                                                    <div style={{ height: 4, background: "var(--bg-hover)", borderRadius: 2, overflow: "hidden" }}>
+                                                        <div style={{ height: "100%", width: `${barPct}%`, background: i === 0 ? "var(--accent)" : i === pipeline.length - 1 ? "#10b981" : "#f59e0b", borderRadius: 2 }} />
                                                     </div>
                                                 </div>
-                                                <span style={{ fontWeight: 700, color: "var(--text-primary)", minWidth: 30, textAlign: "right" }}>
-                                                    {row.value}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {/* Summary */}
-                                    <div style={{ marginTop: 16, padding: 14, background: "var(--accent-light)", borderRadius: 10 }}>
-                                        <div style={{ fontSize: 11, color: "var(--accent-text)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>
-                                            Средний score по всем лидам
-                                        </div>
-                                        <div style={{ fontSize: 28, fontWeight: 800, color: "var(--accent)" }}>
-                                            {leadStats?.avg_score?.toFixed(1) ?? "—"}
-                                        </div>
-                                        <div style={{ marginTop: 8 }}>
-                                            <RatingBar value={leadStats?.avg_score ?? 0} max={100} />
-                                        </div>
+                                            )
+                                        })}
                                     </div>
-                                </div>
+                                </>
                             )}
-                        </div>
-                    </div>
-                </>
-            )}
-
-            {/* ── Agents KPI Tab ── */}
-            {activeTab === "agents" && (
-                <>
-                    {loading ? (
-                        <div className="empty-state"><div style={{ color: "var(--text-muted)" }}>Загрузка...</div></div>
-                    ) : kpiData.length === 0 ? (
-                        <div className="empty-state">
-                            <div className="empty-state__icon">📊</div>
-                            <div className="empty-state__title">Нет данных KPI</div>
-                            <div className="empty-state__text">Данные появятся когда агенты начнут работать с лидами</div>
-                        </div>
-                    ) : (
-                        <>
-                            {/* KPI summary cards */}
-                            <div className="grid-4" style={{ marginBottom: 20 }}>
-                                {[
-                                    { label: "Агентов", value: String(kpiData.length) },
-                                    { label: "Всего сделок", value: String(kpiData.reduce((s, a) => s + (a.total_deals ?? 0), 0)) },
-                                    { label: "Закрытых", value: String(kpiData.reduce((s, a) => s + (a.closed_deals ?? 0), 0)) },
-                                    { label: "Общая выручка", value: formatMoney(kpiData.reduce((s, a) => s + parseFloat(a.total_revenue || "0"), 0)) },
-                                ].map(s => (
-                                    <div className="stat-card" key={s.label}>
-                                        <div className="stat-card__label">{s.label}</div>
-                                        <div className="stat-card__value" style={{ color: "var(--accent)" }}>{s.value}</div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* KPI Table */}
-                            <div className="g-card" style={{ padding: 0, overflow: "hidden" }}>
-                                <div style={{ overflowX: "auto" }}>
-                                    <table className="g-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Агент</th>
-                                                <th>Отдел</th>
-                                                <th>Конверсия</th>
-                                                <th>Всего</th>
-                                                <th>Закрытых</th>
-                                                <th>В работе</th>
-                                                <th>Провалено</th>
-                                                <th>За неделю</th>
-                                                <th>За месяц</th>
-                                                <th>Выручка</th>
-                                                <th>Ср. сделка</th>
-                                                <th>Рейтинг</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {kpiData.map((agent, i) => (
-                                                <tr key={agent.agent_id}>
-                                                    <td>
-                                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                                            <div style={{
-                                                                width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-                                                                background: i === 0 ? "linear-gradient(135deg,#0d9488,#14b8a6)" : "var(--accent-light)",
-                                                                color: i === 0 ? "white" : "var(--accent)",
-                                                                display: "flex", alignItems: "center", justifyContent: "center",
-                                                                fontSize: 11, fontWeight: 700,
-                                                            }}>
-                                                                {i === 0 ? "★" : agent.full_name?.charAt(0) ?? "?"}
-                                                            </div>
-                                                            <div>
-                                                                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{agent.full_name}</div>
-                                                                <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{agent.email}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{agent.department}</span>
-                                                    </td>
-                                                    <td>
-                                                        <div>
-                                                            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)", marginBottom: 3 }}>
-                                                                {(agent.conversion_rate * 100).toFixed(1)}%
-                                                            </div>
-                                                            <div style={{ width: 60 }}>
-                                                                <RatingBar value={agent.conversion_rate * 100} max={100} />
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td style={{ fontWeight: 600, color: "var(--text-primary)" }}>{agent.total_deals}</td>
-                                                    <td>
-                                                        <span style={{ color: "#10b981", fontWeight: 700 }}>{agent.closed_deals}</span>
-                                                    </td>
-                                                    <td>
-                                                        <span style={{ color: "#f59e0b", fontWeight: 600 }}>{agent.in_progress_deals}</span>
-                                                    </td>
-                                                    <td>
-                                                        <span style={{ color: "#ef4444", fontWeight: 600 }}>{agent.failed_deals ?? 0}</span>
-                                                    </td>
-                                                    <td style={{ color: "var(--text-secondary)" }}>{agent.deals_this_week ?? "—"}</td>
-                                                    <td style={{ color: "var(--text-secondary)" }}>{agent.deals_this_month ?? "—"}</td>
-                                                    <td>
-                                                        <span style={{ fontWeight: 700, color: "var(--accent)" }}>{formatMoney(agent.total_revenue)}</span>
-                                                    </td>
-                                                    <td style={{ color: "var(--text-secondary)" }}>{formatMoney(agent.avg_deal_value)}</td>
-                                                    <td>
-                                                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                                            <span style={{ color: "#f59e0b", fontSize: 12 }}>★</span>
-                                                            <span style={{ fontWeight: 600, color: "var(--text-primary)", fontSize: 13 }}>
-                                                                {agent.rating?.toFixed(1) ?? "—"}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </>
-            )}
+                </div>
+            </div>
         </AppLayout>
     )
 }

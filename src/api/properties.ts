@@ -1,12 +1,16 @@
 import { api } from './client'
 
 export interface Property {
-    id: string | number
+    id: string
     title?: string | null | undefined
     address?: string | null | undefined
-    price?: string | number | null | undefined
+    price?: number | null | undefined
     rooms?: number | null | undefined
     area?: number | null | undefined
+    source?: string | null | undefined
+    coverImage?: string | null | undefined
+    imagesCount?: number | null | undefined
+    createdAt?: string | null | undefined
     [key: string]: unknown
 }
 
@@ -19,11 +23,11 @@ export interface PropertiesQuery {
 }
 
 export const propertiesApi = {
-    async list(params?: PropertiesQuery): Promise<Property[]> {
+   async list(params?: PropertiesQuery): Promise<Property[]> {
     const { data } = await api.get('/api/external/properties/', { params })
     if (Array.isArray(data)) return data
+    if (Array.isArray(data?.items)) return data.items
     if (Array.isArray(data?.results)) return data.results
-    if (Array.isArray(data?.data)) return data.data
     return []
 },
 
