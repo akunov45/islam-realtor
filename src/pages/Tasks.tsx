@@ -229,7 +229,7 @@ export default function Tasks() {
                             { label: "Предстоящих", value: String(upcomingCount), color: "var(--accent)" },
                             { label: "Следующая", value: todayData?.upcoming?.next_due_at ? formatDateTime(todayData.upcoming.next_due_at) : "—", color: "var(--text-secondary)" },
                         ].map(s => (
-                            <div className="stat-card" key={s.label}>
+                            <div className="stat-card" key={s.label} style={{ backgroundColor: "var(--bg-tertiary)" }}>
                                 <div className="stat-card__label">{s.label}</div>
                                 <div className="stat-card__value" style={{ color: s.color, fontSize: s.label === "Следующая" ? 16 : undefined }}>{s.value}</div>
                             </div>

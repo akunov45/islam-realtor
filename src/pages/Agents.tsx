@@ -191,7 +191,7 @@ export default function Agents() {
                         { label: "Средняя конверсия", value: `${(teamStats.avg_conversion_rate * 100).toFixed(1)}%`, color: "#10b981" },
                         { label: "Средний рейтинг", value: teamStats.avg_rating.toFixed(2), color: "#f59e0b" },
                     ].map(s => (
-                        <div className="stat-card" key={s.label}>
+                        <div className="stat-card" key={s.label} style={{ backgroundColor: "var(--bg-tertiary)" }}>
                             <div className="stat-card__label">{s.label}</div>
                             <div className="stat-card__value" style={{ color: s.color }}>{s.value}</div>
                         </div>

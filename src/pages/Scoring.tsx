@@ -144,7 +144,7 @@ export default function Scoring() {
                     { label: "Средняя сделка", value: loading ? "..." : formatMoney(revenue?.avg_deal), color: "var(--accent)", sub: "средний чек" },
                     { label: "Среднее закрытие", value: loading ? "..." : `${data?.avg_time_to_close_days?.toFixed(1) ?? "—"} дн`, color: "#f59e0b", sub: "дней до закрытия" },
                 ].map(s => (
-                    <div className="stat-card" key={s.label}>
+                    <div className="stat-card" key={s.label} style={{ backgroundColor: "var(--bg-tertiary)" }}>
                         <div className="stat-card__label">{s.label}</div>
                         <div className="stat-card__value" style={{ color: s.color }}>{s.value}</div>
                         <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>{s.sub}</div>

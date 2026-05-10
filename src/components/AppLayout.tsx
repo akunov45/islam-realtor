@@ -217,15 +217,15 @@ export default function AppLayout({ children, title, breadcrumbs, actions }: Pro
       </aside>
 
       {/* ── Main ── */}
-      <div className="g-main">
-        <header className="g-topbar">
+      <div className="g-main" >
+        <header className="g-topbar" style={{ backgroundColor: "var(--bg-sidebar)" }}>
           <button className="g-topbar__burger" onClick={() => setSidebarOpen(p => !p)}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
 
-          <div className="g-topbar__left">
+          <div className="g-topbar__left" >
             {breadcrumbs ? breadcrumbs.map((b, i) => (
               <span key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 {i > 0 && <span style={{ color: 'var(--text-muted)' }}>›</span>}
@@ -236,7 +236,7 @@ export default function AppLayout({ children, title, breadcrumbs, actions }: Pro
             )) : <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 13 }}>{title}</span>}
           </div>
 
-          <div className="g-topbar__search">
+          <div className="g-topbar__search" >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
               <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" strokeLinecap="round" />
             </svg>
@@ -338,7 +338,7 @@ export default function AppLayout({ children, title, breadcrumbs, actions }: Pro
           </div>
         </header>
 
-        <div className="g-content">
+        <div className="g-content" style={{ backgroundColor: 'var(--bg-body)' }}>
           <div className="page-header">
             <div>
               <h1 className="page-title">{title}</h1>

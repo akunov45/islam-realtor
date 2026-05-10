@@ -67,7 +67,7 @@ export default function Dialogs() {
                     { label: "Закрытых", value: String(conversations.filter(c => !c.is_active).length), color: "var(--text-muted)" },
                     { label: "Сообщений", value: String(conversations.reduce((s, c) => s + c.messages.length, 0)), color: "var(--accent)" },
                 ].map(s => (
-                    <div className="stat-card" key={s.label}>
+                    <div className="stat-card" key={s.label} style={{ backgroundColor: "var(--bg-tertiary)" }}>
                         <div className="stat-card__label">{s.label}</div>
                         <div className="stat-card__value" style={{ color: s.color }}>{s.value}</div>
                     </div>

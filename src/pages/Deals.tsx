@@ -188,7 +188,7 @@ export default function Deals() {
                     { label: "Закрытых", value: String(deals.filter(d => d.status === "closed").length), color: "#10b981" },
                     { label: "Выручка", value: totalRevenue >= 1_000_000 ? `$${(totalRevenue / 1_000_000).toFixed(1)}M` : `$${(totalRevenue / 1_000).toFixed(0)}K`, color: "var(--accent)" },
                 ].map(s => (
-                    <div className="stat-card" key={s.label}>
+                    <div className="stat-card" key={s.label} style={{ backgroundColor: "var(--bg-tertiary)" }}>
                         <div className="stat-card__label">{s.label}</div>
                         <div className="stat-card__value" style={{ color: s.color }}>{s.value}</div>
                     </div>

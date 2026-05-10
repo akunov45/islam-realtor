@@ -75,7 +75,7 @@ function StatCard({ label, value, sub, subColor, icon }: {
   label: string; value: string; sub?: string; subColor?: string; icon?: React.ReactNode
 }) {
   return (
-    <div className="stat-card">
+    <div className="stat-card" style={{ backgroundColor:"var(--bg-tertiary)"}}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div className="stat-card__label">{label}</div>
         {icon && (
@@ -131,7 +131,7 @@ export default function Dashboard() {
       title={`Добро пожаловать, ${displayName}`}
       breadcrumbs={[{ label: "Дашборд" }]}
       actions={
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", }}>
           {summary?.cached_at && (
             <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
               Обновлено {formatTime(summary.cached_at)}
