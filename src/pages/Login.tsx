@@ -17,8 +17,6 @@ export default function Login() {
         if (!user) return
         if (user.must_change_password) {
             navigate('/change-password', { replace: true })
-        } else if (user.role === 'buyer' || user.role === 'seller') {
-            navigate('/guest', { replace: true })
         } else {
             navigate('/dashboard', { replace: true })
         }
